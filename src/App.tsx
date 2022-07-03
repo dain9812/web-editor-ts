@@ -1,9 +1,12 @@
 import "./App.css";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function App() {
+  const ref = useRef("");
+  const changeRef = useRef(false);
+  const changeCountRef = useRef(0);
   const [post, setPost] = useState<string[]>(() => {
     const data = localStorage.getItem("data");
 
@@ -15,7 +18,37 @@ function App() {
       return [];
     }
   });
-  const [content, setContent] = useState<string>("");
+  const [content, setContent] = useState<string>(() => {
+    const tmp = localStorage.getItem("tmp");
+    return tmp ?? "";
+  });
+
+  useEffect(() => {
+    changeCountRef.current++;
+    ref.current = content;
+    changeRef.current = true;
+
+    if (changeCountRef.current > 15) {
+      changeCountRef.current = 0;
+      changeRef.current = false;
+      localStorage.setItem("tmp", ref.current);
+      console.log("많은 변화에 의해 바로 저장");
+    }
+  }, [content]);
+
+  useEffect(() => {
+    const intv = setInterval(() => {
+      console.log("인터벌 시작");
+      if (changeRef.current) {
+        console.log(ref.current, "값이 바뀜");
+        localStorage.setItem("tmp", ref.current);
+        changeRef.current = false;
+        changeCountRef.current = 0;
+      }
+    }, 3000);
+
+    return () => clearInterval(intv);
+  }, []);
 
   return (
     <div>
@@ -34,6 +67,7 @@ function App() {
               alert("입력된 내용이 없습니다!");
               return;
             }
+            localStorage.removeItem("tmp");
             setPost((prev) => {
               const rs = [...prev, content];
               localStorage.setItem("data", JSON.stringify(post));
